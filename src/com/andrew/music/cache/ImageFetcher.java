@@ -21,10 +21,8 @@ import com.andrew.music.Config;
 import com.andrew.music.MusicPlaybackService;
 import com.andrew.music.lastfm.Album;
 import com.andrew.music.lastfm.Artist;
-import com.andrew.music.lastfm.Image;
+import com.andrew.music.lastfm.MusicEntry;
 import com.andrew.music.lastfm.ImageSize;
-import com.andrew.music.lastfm.PaginatedResult;
-import com.andrew.music.utils.MusicAppUtils;
 import com.andrew.music.utils.MusicUtils;
 import com.andrew.music.utils.PreferenceUtils;
 
@@ -36,7 +34,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.Iterator;
 
 /**
  * A subclass of {@link ImageWorker} that fetches images from a URL.
@@ -95,6 +92,18 @@ public class ImageFetcher extends ImageWorker {
         return null;
     }
 
+    private static String getBestImage(MusicEntry e) {
+        final ImageSize[] QUALITY = {ImageSize.EXTRALARGE, ImageSize.LARGE, ImageSize.MEDIUM,
+                ImageSize.SMALL, ImageSize.UNKNOWN};
+        for(ImageSize q : QUALITY) {
+            String url = e.getImageURL(q);
+            if (url != null) {
+                return url;
+            }
+        }
+        return null;
+    }
+
     /**
      * {@inheritDoc}
      */
@@ -105,17 +114,9 @@ public class ImageFetcher extends ImageWorker {
             case ARTIST:
                 if (!TextUtils.isEmpty(artistName)) {
                     if (PreferenceUtils.getInstance(mContext).downloadMissingArtistImages()) {
-                        final PaginatedResult<Image> paginatedResult = Artist.getImages(mContext,
-                                artistName);
-                        if (paginatedResult != null) {
-                            final Iterator<Image> iterator = paginatedResult.pageResults.iterator();
-                            while (iterator.hasNext()) {
-                                final Image temp = iterator.next();
-                                final String url = temp.getImageURL(ImageSize.EXTRALARGE);
-                                if (url != null) {
-                                    return url;
-                                }
-                            }
+                        final Artist artist = Artist.getInfo(mContext, artistName);
+                        if (artist != null) {
+                            return getBestImage(artist);
                         }
                     }
                 }
@@ -128,10 +129,7 @@ public class ImageFetcher extends ImageWorker {
                             final Album album = Album.getInfo(mContext, correction.getName(),
                                     albumName);
                             if (album != null) {
-                                final String url = album.getImageURL(ImageSize.LARGE);
-                                if (url != null) {
-                                    return url;
-                                }
+                                return getBestImage(album);
                             }
                         }
                     }
